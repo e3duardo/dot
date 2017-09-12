@@ -15,16 +15,17 @@
         android:layout_gravity="center"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="5dp"
+        android:layout_marginBottom="10dp"
         >
         <LinearLayout
-            android:padding="5dp"
+            android:padding="8dp"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
         <TextView
             android:id="@+id/info_text2"
+            android:textSize="15sp"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Minha semana"/>
@@ -32,7 +33,8 @@
         <com.robinhood.spark.SparkView
             android:id="@+id/sparkview"
             android:layout_width="match_parent"
-            android:layout_height="80sp"/>
+            android:layout_height="80sp"
+            style="@style/MySparkViewStyle"/>
 
         </LinearLayout>
     </android.support.v7.widget.CardView>
@@ -42,23 +44,25 @@
         android:layout_gravity="center"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="5dp"
+        android:layout_marginBottom="10dp"
         android:padding="10dp"
         >
         <LinearLayout
-            android:padding="5dp"
+            android:padding="8dp"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical">
         <TextView
             android:id="@+id/info_text3"
+            android:textSize="15sp"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Meu dia"/>
 
             <android.support.v7.widget.RecyclerView
+                android:id="@+id/pontosDoDia"
                 android:layout_width="match_parent"
-                android:layout_height="100sp">
+                android:layout_height="wrap_content">
             </android.support.v7.widget.RecyclerView>
         </LinearLayout>
     </android.support.v7.widget.CardView>
