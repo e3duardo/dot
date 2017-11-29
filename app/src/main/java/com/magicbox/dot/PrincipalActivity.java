@@ -1,8 +1,15 @@
 package com.magicbox.dot;
 
+import android.content.Intent;
+import android.graphics.Bitmap;
+import android.net.Uri;
+import android.os.Environment;
+import android.provider.MediaStore;
+import android.support.annotation.NonNull;
 import android.support.design.widget.TabLayout;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
+import android.support.v4.content.FileProvider;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -19,142 +26,289 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 
+import android.widget.ArrayAdapter;
+import android.widget.ListView;
 import android.widget.TextView;
 
+import com.facebook.login.LoginManager;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.firebase.auth.FacebookAuthProvider;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.ChildEventListener;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
+import com.google.firebase.storage.UploadTask;
 import com.magicbox.dot.adapter.MinhaSemanaAdapter;
 import com.magicbox.dot.adapter.PontoAdapter;
+import com.magicbox.dot.adapter.TemplateAdapter;
 import com.magicbox.dot.model.Ponto;
+import com.magicbox.dot.model.Template;
+import com.magicbox.dot.service.PontoService;
+import com.magicbox.dot.service.TemplateService;
+import com.magicbox.dot.utils.DateUtils;
 import com.robinhood.spark.SparkView;
 
+import java.io.File;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 public class PrincipalActivity extends AppCompatActivity {
 
-    /**
-     * The {@link android.support.v4.view.PagerAdapter} that will provide
-     * fragments for each of the sections. We use a
-     * {@link FragmentPagerAdapter} derivative, which will keep every
-     * loaded fragment in memory. If this becomes too memory intensive, it
-     * may be best to switch to a
-     * {@link android.support.v4.app.FragmentStatePagerAdapter}.
-     */
+    static final int REQUEST_TAKE_PHOTO = 1;
+
     private SectionsPagerAdapter mSectionsPagerAdapter;
 
-    /**
-     * The {@link ViewPager} that will host the section contents.
-     */
     private ViewPager mViewPager;
+
+    private DatabaseReference mDatabase;
+    private PontoService pontoService;
+
+    private Template nextTemplate;
+
+    private FloatingActionButton fab;
+    private String mCurrentPhotoPath;
+    private String mCurrentPontoKey;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_principal);
 
+        this.mDatabase = FirebaseDatabase.getInstance().getReference();
+        this.pontoService = new PontoService(mDatabase);
+
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-        // Create the adapter that will return a fragment for each of the three
-        // primary sections of the activity.
+
         mSectionsPagerAdapter = new SectionsPagerAdapter(getSupportFragmentManager());
 
-        // Set up the ViewPager with the sections adapter.
+
         mViewPager = (ViewPager) findViewById(R.id.container);
         mViewPager.setAdapter(mSectionsPagerAdapter);
 
         TabLayout tabLayout = (TabLayout) findViewById(R.id.tabs);
         tabLayout.setupWithViewPager(mViewPager);
 
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
+        fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                Ponto salvo = pontoService.salvar(nextTemplate, new Date(), new Date());
+
+                mCurrentPontoKey = salvo.getKey();
+
                 Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
                         .setAction("Action", null).show();
+
+                dispatchTakePictureIntent(salvo);
+
+                carregarTemplates();
             }
         });
     }
 
 
     @Override
+    protected void onResume() {
+        super.onResume();
+//        Template template = Template.fromMap(dataSnapshot.getValue());
+//        templates.add(template);
+
+
+        carregarTemplates();
+    }
+
+    private void carregarTemplates() {
+
+
+
+        fab.setVisibility(View.INVISIBLE);
+
+        mDatabase.child("pontos").orderByChild("data").equalTo(DateUtils.dataParaString(new Date())).addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                final List<Template> templatesJaMarcadosHoje = new LinkedList<>();
+
+                if(dataSnapshot.getChildrenCount() > 0) {
+                    Map<String, Object> mapa = (Map<String, Object>) dataSnapshot.getValue();
+
+                    List<Ponto> pontos = new LinkedList<>();
+                    for (Map.Entry<String, Object> entry : mapa.entrySet()) {
+                        Ponto ponto = Ponto.fromMap(entry.getValue());
+                        ponto.setKey(entry.getKey());
+                        pontos.add(ponto);
+                        templatesJaMarcadosHoje.add(ponto.getTemplate());
+                    }
+                }
+
+                mDatabase.child("templates")
+                .orderByChild("semana")
+                .equalTo(DateUtils.dataParaDiaSemana(new Date()).name())
+                .addValueEventListener(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(DataSnapshot dataSnapshot) {
+
+                        if(dataSnapshot.getChildrenCount() > 0){
+                            Map<String, Object> mapa = (Map<String, Object>) dataSnapshot.getValue();
+
+                            List<Template> templates = new LinkedList<>();
+
+                            for (Map.Entry<String, Object> entry : mapa.entrySet()){
+                                Template template = Template.fromMap(entry.getValue());
+                                template.setKey(entry.getKey());
+                                templates.add(template);
+                            }
+
+                            templates.removeAll(templatesJaMarcadosHoje);
+
+                            if(templates.size() > 0) {
+                                Collections.sort(templates, new Comparator<Template>() {
+                                    public int compare(Template t1, Template t2) {
+                                        return t1.getHorario().compareTo(t2.getHorario());
+                                    }
+                                });
+
+                                nextTemplate = templates.get(0);
+
+                                fab.setVisibility(View.VISIBLE);
+                            }
+                        }
+                    }
+
+                    @Override
+                    public void onCancelled(DatabaseError databaseError) {}
+                });
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {}
+        });
+    }
+
+    @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_principal, menu);
         return true;
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
 
-        //noinspection SimplifiableIfStatement
+        if (id == R.id.action_configuracoes){
+            Intent intent = new Intent(this, ConfiguracoesActivity.class);
+            startActivity(intent);
+        }
         if (id == R.id.action_sair) {
-            return true;
+            //LoginManager.getInstance().logOut();
+            FirebaseAuth.getInstance().signOut();
+            LoginManager.getInstance().logOut();
+
+            Intent intent = new Intent(this, LoginActivity.class);
+            startActivity(intent);
         }
 
         return super.onOptionsItemSelected(item);
     }
+    //https://developer.android.com/training/camera/photobasics.html
+    // cria foto
+    private File createImageFile(final Ponto ponto) throws IOException {
+        // Create an image file name
+        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+        String imageFileName = ponto.getKey(); //"JPEG_" + timeStamp + "_";
+        File storageDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
+        File image = File.createTempFile(
+                imageFileName,  /* prefix */
+                ".jpg",         /* suffix */
+                storageDir      /* directory */
+        );
 
-    /**
-     * A placeholder fragment containing a simple view.
-     */
-    public static class PlaceholderFragment extends Fragment {
-        /**
-         * The fragment argument representing the section number for this
-         * fragment.
-         */
-        private static final String ARG_SECTION_NUMBER = "section_number";
-
-        public PlaceholderFragment() {
-        }
-
-        /**
-         * Returns a new instance of this fragment for the given section
-         * number.
-         */
-        public static PlaceholderFragment newInstance(int sectionNumber) {
-            PlaceholderFragment fragment = new PlaceholderFragment();
-            Bundle args = new Bundle();
-            args.putInt(ARG_SECTION_NUMBER, sectionNumber);
-            fragment.setArguments(args);
-            return fragment;
-        }
-
-        @Override
-        public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                                 Bundle savedInstanceState) {
-            View rootView = inflater.inflate(R.layout.fragment_ponto, container, false);
-            //TextView textView = (TextView) rootView.findViewById(R.id.section_label);
-            //textView.setText(getString(R.string.section_format, getArguments().getInt(ARG_SECTION_NUMBER)));
+        // Save a file: path for use with ACTION_VIEW intents
+        mCurrentPhotoPath = image.getAbsolutePath();
 
 
-            SparkView sparkView = (SparkView) rootView.findViewById(R.id.sparkview);
-            float[] spark = {0, 0, 0f, 2f, -5f, 0, 0};
+        return image;
+    }
 
-            sparkView.setAdapter(new MinhaSemanaAdapter(spark));
-
-
-            RecyclerView recyclerView = (RecyclerView) rootView.findViewById(R.id.pontosDoDia);
-
-            List<Ponto> livros = Arrays.asList(new Ponto(new Date(), new Date()), new Ponto(new Date(), new Date())); // recupera do banco de dados ou webservice
-
-                    recyclerView.setAdapter(new PontoAdapter(getContext(), livros));
-
-            RecyclerView.LayoutManager layout = new LinearLayoutManager(getContext(), LinearLayoutManager.VERTICAL, false);
-
-            recyclerView.setLayoutManager(layout);
-
-            return rootView;
+    //inicia intent
+    private void dispatchTakePictureIntent(Ponto ponto) {
+        Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+        // Ensure that there's a camera activity to handle the intent
+        if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
+            // Create the File where the photo should go
+            File photoFile = null;
+            try {
+                photoFile = createImageFile(ponto);
+            } catch (IOException ex) {
+                // Error occurred while creating the File
+                System.out.print(ex);
+            }
+            // Continue only if the File was successfully created
+            if (photoFile != null) {
+                Uri photoURI = FileProvider.getUriForFile(this,
+                        "com.example.android.fileprovider",
+                        photoFile);
+                takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI);
+                startActivityForResult(takePictureIntent, REQUEST_TAKE_PHOTO);
+            }
         }
     }
 
-    /**
-     * A {@link FragmentPagerAdapter} that returns a fragment corresponding to
-     * one of the sections/tabs/pages.
-     */
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == REQUEST_TAKE_PHOTO && resultCode == RESULT_OK) {
+            //Bundle extras = data.getExtras();
+            //Bitmap imageBitmap = (Bitmap) extras.get("data");
+
+
+
+           // mImageView.setImageBitmap(imageBitmap);
+
+            //https://developer.android.com/training/camera/photobasics.html
+
+
+
+
+            StorageReference reference = FirebaseStorage.getInstance().getReference();
+            Uri file = Uri.fromFile(new File(mCurrentPhotoPath));
+            StorageReference riversRef = reference.child("pontos").child(mCurrentPontoKey+".jpg");
+
+            riversRef.putFile(file)
+                    .addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
+                        @Override
+                        public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
+                            // Get a URL to the uploaded content
+                            Uri downloadUrl = taskSnapshot.getDownloadUrl();
+
+                            mDatabase.child("pontos").child(mCurrentPontoKey).child("foto").setValue(downloadUrl.toString());
+                        }
+                    })
+                    .addOnFailureListener(new OnFailureListener() {
+                        @Override
+                        public void onFailure(@NonNull Exception exception) {
+                            // Handle unsuccessful uploads
+                            // ...
+                        }
+                    });
+
+
+        }
+    }
+
+
     public class SectionsPagerAdapter extends FragmentPagerAdapter {
 
         public SectionsPagerAdapter(FragmentManager fm) {
@@ -163,14 +317,19 @@ public class PrincipalActivity extends AppCompatActivity {
 
         @Override
         public Fragment getItem(int position) {
-            // getItem is called to instantiate the fragment for the given page.
-            // Return a PlaceholderFragment (defined as a static inner class below).
-            return PlaceholderFragment.newInstance(position + 1);
+            switch (position) {
+                case 0:
+                    return new PontoFragment();
+                case 1:
+                    return new GraficosFragment();
+                case 2:
+                    return new NoticiasFragment();
+            }
+            return new PontoFragment();
         }
 
         @Override
         public int getCount() {
-            // Show 3 total pages.
             return 3;
         }
 

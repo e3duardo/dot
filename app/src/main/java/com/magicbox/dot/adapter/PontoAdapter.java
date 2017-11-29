@@ -41,8 +41,8 @@ public class PontoAdapter extends RecyclerView.Adapter<PontoViewHolder> {
     public void onBindViewHolder(PontoViewHolder holder, int position) {
         Ponto ponto = this.pontos.get(position);
 
-        holder.abertura.setText(DateUtils.dataParaHoraString(ponto.getAbertura()));
-        holder.fechamento.setText(DateUtils.dataParaHoraString(ponto.getFechamento()));
+        holder.abertura.setText(DateUtils.dataParaHoraString(ponto.getData()));
+        holder.fechamento.setText(DateUtils.dataParaHoraString(ponto.getHora()));
     }
 
     @Override
@@ -59,8 +59,8 @@ class PontoViewHolder extends RecyclerView.ViewHolder{
     public PontoViewHolder(View view) {
         super(view);
 
-        abertura = view.findViewById(R.id.abertura);
-        fechamento = view.findViewById(R.id.fechamento);
+        abertura = (TextView) view.findViewById(R.id.abertura);
+        fechamento = (TextView) view.findViewById(R.id.fechamento);
     }
 
 }

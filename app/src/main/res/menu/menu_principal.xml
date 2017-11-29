@@ -3,6 +3,11 @@
     xmlns:tools="http://schemas.android.com/tools"
     tools:context="com.magicbox.dot.PrincipalActivity">
     <item
+        android:id="@+id/action_configuracoes"
+        android:orderInCategory="100"
+        android:title="@string/action_configuracoes"
+        app:showAsAction="never" />
+    <item
         android:id="@+id/action_sair"
         android:orderInCategory="100"
         android:title="@string/action_sair"
