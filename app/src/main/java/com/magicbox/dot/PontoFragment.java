@@ -1,5 +1,6 @@
 package com.magicbox.dot;
 
+import android.app.AlertDialog;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
@@ -13,6 +14,9 @@ import android.widget.ArrayAdapter;
 import android.widget.ImageView;
 import android.widget.ListView;
 
+import com.google.android.gms.ads.AdRequest;
+import com.google.android.gms.ads.AdView;
+import com.google.android.gms.ads.MobileAds;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.database.DataSnapshot;
@@ -32,6 +36,7 @@ import com.robinhood.spark.SparkView;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
@@ -43,9 +48,9 @@ public class PontoFragment extends Fragment {
 
     private DatabaseReference mDatabase;
 
-    public PontoFragment() {
-    }
+    private static final String TAG = "MainActivity";
 
+    private AdView mAdView;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -55,30 +60,17 @@ public class PontoFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
+
         final View view = inflater.inflate(R.layout.fragment_ponto, container, false);
 
-
-        SparkView sparkView = (SparkView) view.findViewById(R.id.sparkview);
         float[] spark = {0, 0, 0f, 2f, -5f, 0, 0};
 
+        SparkView sparkView = (SparkView) view.findViewById(R.id.sparkview);
         sparkView.setAdapter(new MinhaSemanaAdapter(spark));
 
-
-
-        final ImageView image = (ImageView) view.findViewById(R.id.imgevW);
+        //final ImageView image = (ImageView) view.findViewById(R.id.imgevW);
 
         this.mDatabase = FirebaseDatabase.getInstance().getReference();
-
-
-        //RecyclerView recyclerView = (RecyclerView) view.findViewById(R.id.pontos);
-
-        //List<Ponto> livros = Arrays.asList(new Ponto(new Date(), new Date()), new Ponto(new Date(), new Date())); // recupera do banco de dados ou webservice
-
-        // recyclerView.setAdapter(new PontoAdapter(getContext(), livros));
-
-        //RecyclerView.LayoutManager layout = new LinearLayoutManager(getContext(), LinearLayoutManager.VERTICAL, false);
-
-        //recyclerView.setLayoutManager(layout);
 
 
         mDatabase.child("pontos")
@@ -106,7 +98,6 @@ public class PontoFragment extends Fragment {
                         public void onItemClick(AdapterView<?> adapterView, final View view, int i, long l) {
                             Ponto ponto = pontos.get(i);
 
-
                             if(ponto.temFoto()) {
 
                                 try {
@@ -120,19 +111,25 @@ public class PontoFragment extends Fragment {
                                             .addOnSuccessListener(new OnSuccessListener<FileDownloadTask.TaskSnapshot>() {
                                                 @Override
                                                 public void onSuccess(FileDownloadTask.TaskSnapshot taskSnapshot) {
-                                                    // Successfully downloaded data to local file
-                                                    // ...
-
                                                     Uri uri = Uri.fromFile(localFile);
 
-                                                    image.setImageURI(uri);
+                                                    View view = getActivity().getLayoutInflater().inflate(R.layout.dialog_foto, null);
+
+                                                    ImageView imageView = (ImageView) view.findViewById(R.id.imagew);
+                                                    imageView.setImageURI(uri);
+
+                                                    AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+                                                    builder.setTitle("Titulo");
+                                                    builder.setView(view);
+
+                                                    final AlertDialog alerta = builder.create();
+                                                    alerta.show();
 
                                                 }
                                             }).addOnFailureListener(new OnFailureListener() {
                                         @Override
                                         public void onFailure(@NonNull Exception exception) {
-                                            // Handle failed download
-                                            // ...
+
                                         }
                                     });
                                 } catch (IOException e) {
@@ -141,9 +138,6 @@ public class PontoFragment extends Fragment {
                             }
                         }
                     });
-
-
-//
                 }
             }
 
@@ -152,7 +146,6 @@ public class PontoFragment extends Fragment {
             }
 
         });
-
 
         mDatabase.child("templates")
         .orderByChild("semana")
@@ -170,8 +163,14 @@ public class PontoFragment extends Fragment {
                         templates.add(template);
                     }
 
+                    Collections.sort(templates, new Comparator<Template>() {
+                        public int compare(Template t1, Template t2) {
+                            return t1.getHorario().compareTo(t2.getHorario());
+                        }
+                    });
+
                     ListView templatesList = (ListView) view.findViewById(R.id.templatesListView);
-                    ArrayAdapter<Template> adapterTemplates = new ArrayAdapter<Template>(getContext(), android.R.layout.simple_list_item_1, Collections.unmodifiableList(templates));
+                    ArrayAdapter<Template> adapterTemplates = new ArrayAdapter<>(getContext(), android.R.layout.simple_list_item_1, Collections.unmodifiableList(templates));
                     templatesList.setAdapter(adapterTemplates);
                 }
             }
@@ -181,8 +180,13 @@ public class PontoFragment extends Fragment {
             }
         });
 
+
+        MobileAds.initialize(getActivity(), "ca-app-pub-4739730263274550~6836861623");
+
+        mAdView = (AdView) view.findViewById(R.id.adView);
+        AdRequest adRequest = new AdRequest.Builder().build();
+        mAdView.loadAd(adRequest);
+
         return view;
     }
-
-
 }

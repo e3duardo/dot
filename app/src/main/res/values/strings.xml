@@ -1,13 +1,14 @@
 <resources>
     <string name="facebook_app_id">2021024588172825</string>
     <string name="fb_login_protocol_scheme">fb2021024588172825</string>
+    <string name="banner_ad_unit_id">ca-app-pub-3940256099942544/6300978111</string>
 
     <string name="app_name">Dot</string>
-    <string name="title_activity_principal">Ponto</string>
+    <string name="title_activity_principal">Dot Ponto</string>
     <string name="action_settings">Settings</string>
     <string name="section_format">Hello World from section: %1$d</string>
     <string name="action_sair">Sair</string>
-    <string name="title_activity_login">Entrar</string>
+    <string name="title_activity_login">Login</string>
 
     <!-- Strings related to login -->
     <string name="prompt_email">Email</string>
@@ -32,8 +33,6 @@
         <item>Sábado</item>
         <item>Domingo</item>
     </string-array>
-
-
 
 
     <!-- TODO: Remove or change this placeholder text -->
@@ -115,10 +114,8 @@
     <string name="pref_header_horarios">Horários</string>
 
 
-
-
     <!-- -->
-    <string name="welcome">Welcome!</string>
+    <string name="welcome">Bem-vindo!</string>
     <string name="log_in_with_facebook">Log in with Facebook</string>
     <string name="permissions">Permissions</string>
     <string name="label_facebook_login">Facebook Login</string>

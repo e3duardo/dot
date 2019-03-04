@@ -26,7 +26,8 @@ public class ConfiguracoesActivity extends AppCompatActivity {
 
     private Button buttonAdicionar;
     private Spinner diaSemana;
-    private EditText horario;
+    private EditText entrada;
+    private EditText saida;
     private RecyclerView listaTemplatesDia;
 
     private DatabaseReference mDatabase;
@@ -41,7 +42,8 @@ public class ConfiguracoesActivity extends AppCompatActivity {
         this.templateService = new TemplateService(mDatabase);
 
         this.diaSemana = (Spinner) findViewById(R.id.dia_semana);
-        this.horario = (EditText) findViewById(R.id.horario);
+        this.entrada = (EditText) findViewById(R.id.entrada);
+        this.saida = (EditText) findViewById(R.id.saida);
         this.buttonAdicionar = (Button) findViewById(R.id.adicionar);
 
         this.diaSemana.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, DiaSemana.values()));
@@ -55,7 +57,6 @@ public class ConfiguracoesActivity extends AppCompatActivity {
         this.mDatabase.child("templates").addChildEventListener(new ChildEventListener() {
             @Override
             public void onChildAdded(DataSnapshot dataSnapshot, String s) {
-
                 Template template = Template.fromMap(dataSnapshot.getValue());
 
                 adapter.add(template);
@@ -63,12 +64,18 @@ public class ConfiguracoesActivity extends AppCompatActivity {
 
             @Override
             public void onChildChanged(DataSnapshot dataSnapshot, String s) {
-                //Template.fromMap(dataSnapshot.getValue());
+                Template template = Template.fromMap(dataSnapshot.getValue());
+
+                adapter.remove(template);
+
+                adapter.add(template);
             }
 
             @Override
             public void onChildRemoved(DataSnapshot dataSnapshot) {
+                Template template = Template.fromMap(dataSnapshot.getValue());
 
+                adapter.remove(template);
             }
 
             @Override
@@ -91,7 +98,8 @@ public class ConfiguracoesActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
 
-                templateService.salvar((DiaSemana) diaSemana.getSelectedItem(), DateUtils.horaStringParaData(horario.getText()));
+                templateService.salvar((DiaSemana) diaSemana.getSelectedItem(), DateUtils.horaStringParaData(entrada.getText()));
+                templateService.salvar((DiaSemana) diaSemana.getSelectedItem(), DateUtils.horaStringParaData(saida.getText()));
 
                 resetView();
                 Snackbar.make(view, "Template adicionado.", Snackbar.LENGTH_LONG).setAction("Action", null).show();
@@ -100,7 +108,9 @@ public class ConfiguracoesActivity extends AppCompatActivity {
     }
 
     private void resetView(){
-        this.horario.setText("");
-        this.diaSemana.setSelection(0);
+        this.entrada.setText("");
+        this.saida.setText("");
+        //this.diaSemana.setSelection(0);
+        //this.horario.setfo
     }
 }

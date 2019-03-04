@@ -1,14 +1,19 @@
 package com.magicbox.dot.adapter;
 
+import android.app.AlertDialog;
+import android.app.DatePickerDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
 
+import com.google.firebase.database.FirebaseDatabase;
 import com.magicbox.dot.R;
 import com.magicbox.dot.model.DiaSemana;
 import com.magicbox.dot.model.Template;
@@ -69,6 +74,11 @@ public class TemplateAdapter extends RecyclerView.Adapter<TemplateViewHolder> {
         this.mapa.get(template.getSemana()).add(template);
         this.notifyDataSetChanged();
     }
+
+    public void remove(Template template) {
+        this.mapa.get(template.getSemana()).remove(template);
+        this.notifyDataSetChanged();
+    }
 }
 
 class TemplateViewHolder extends RecyclerView.ViewHolder{
@@ -81,6 +91,27 @@ class TemplateViewHolder extends RecyclerView.ViewHolder{
 
         semana = (TextView) view.findViewById(R.id.semana);
         horarios = (ListView) view.findViewById(R.id.lista_horarios);
+        horarios.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+            @Override
+            public boolean onItemLongClick(final AdapterView<?> adapterView, View view, int i, long l) {
+
+            new AlertDialog.Builder(view.getContext())
+            .setTitle("Deletando horário")
+            .setMessage("Tem certeza que deseja deletar esse horário?")
+            .setPositiveButton("sim",
+                new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        Template item = (Template) adapterView.getAdapter().getItem(i);
+                        FirebaseDatabase.getInstance().getReference().child("templates").child(item.getKey()).removeValue();
+                    }
+                })
+            .setNegativeButton("não", null)
+            .show();
+
+            return false;
+            }
+        });
     }
 
 }
